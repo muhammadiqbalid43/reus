@@ -9,11 +9,38 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useLogin } from "../hooks/use-login";
+import { useNavigate } from "react-router";
+import { useEffect } from "react";
+import supabase from "@/lib/supabase-client";
 
 const LoginForm = ({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) => {
+  const { mutate: login, isPending, error } = useLogin();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    async function checkSession() {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        navigate("/dashboard");
+      }
+    }
+
+    checkSession();
+  }, [navigate]);
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+
+    login({ email, password });
+  };
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
@@ -22,7 +49,7 @@ const LoginForm = ({
           <CardDescription>Login with your Google account</CardDescription>
         </CardHeader>
         <CardContent>
-          <form>
+          <form onSubmit={handleSubmit}>
             <div className="grid gap-6">
               <div className="flex flex-col gap-4">
                 <Button variant="outline" className="w-full">
@@ -44,6 +71,7 @@ const LoginForm = ({
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
+                    name="email"
                     id="email"
                     type="email"
                     placeholder="m@example.com"
@@ -54,11 +82,17 @@ const LoginForm = ({
                   <div className="flex items-center">
                     <Label htmlFor="password">Password</Label>
                   </div>
-                  <Input id="password" type="password" required />
+                  <Input
+                    name="password"
+                    id="password"
+                    type="password"
+                    required
+                  />
                 </div>
                 <Button type="submit" className="w-full">
-                  Login
+                  {isPending ? "Logging in..." : "Login"}
                 </Button>
+                {error && <p className="text-red-500">{error.message}</p>}
               </div>
               <div className="text-center text-sm">
                 Don&apos;t have an account?{" "}
